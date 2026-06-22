@@ -1,1 +1,276 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Survey Analytics — BinMaster</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
 
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #f3f4f6;
+      color: #111827;
+      padding: 2rem 1rem;
+    }
+
+    header {
+      max-width: 960px;
+      margin: 0 auto 2rem;
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+    header h1 { font-size: 1.4rem; font-weight: 700; }
+    header p  { font-size: 0.85rem; color: #6b7280; }
+    .refresh-btn {
+      font-size: 0.82rem;
+      padding: 0.35rem 0.75rem;
+      border: 1px solid #d1d5db;
+      border-radius: 7px;
+      background: #fff;
+      cursor: pointer;
+      color: #374151;
+    }
+    .refresh-btn:hover { background: #f9fafb; }
+
+    main { max-width: 960px; margin: 0 auto; }
+
+    /* ── Stat cards ── */
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 0.75rem;
+      margin-bottom: 1.5rem;
+    }
+    .stat {
+      background: #fff;
+      border: 1px solid #e5e7eb;
+      border-radius: 12px;
+      padding: 1rem 1.25rem;
+    }
+    .stat-label { font-size: 0.75rem; color: #6b7280; font-weight: 500; margin-bottom: 0.3rem; text-transform: uppercase; letter-spacing: 0.05em; }
+    .stat-value { font-size: 1.7rem; font-weight: 700; color: #111827; }
+    .stat-sub   { font-size: 0.78rem; color: #9ca3af; margin-top: 0.15rem; }
+
+    /* ── Rating breakdown bar ── */
+    .section {
+      background: #fff;
+      border: 1px solid #e5e7eb;
+      border-radius: 12px;
+      padding: 1.25rem 1.5rem;
+      margin-bottom: 1rem;
+    }
+    .section h2 { font-size: 0.95rem; font-weight: 600; color: #111827; margin-bottom: 1rem; }
+
+    .rating-row { margin-bottom: 0.6rem; }
+    .rating-row-label {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.82rem;
+      color: #374151;
+      margin-bottom: 0.25rem;
+    }
+    .bar-track { background: #f3f4f6; border-radius: 99px; height: 8px; overflow: hidden; }
+    .bar-fill  { height: 100%; border-radius: 99px; transition: width 0.6s ease; }
+    .bar-awesome { background: #6366f1; }
+    .bar-good    { background: #10b981; }
+    .bar-ok      { background: #f59e0b; }
+    .bar-poor    { background: #ef4444; }
+
+    /* ── Articles table ── */
+    table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+    th {
+      text-align: left;
+      padding: 0.5rem 0.75rem;
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: #6b7280;
+      border-bottom: 1px solid #f3f4f6;
+    }
+    td { padding: 0.6rem 0.75rem; border-bottom: 1px solid #f9fafb; color: #374151; }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: #fafafa; }
+
+    .pill {
+      display: inline-block;
+      padding: 0.15rem 0.55rem;
+      border-radius: 99px;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+    .pill-yes { background: #d1fae5; color: #065f46; }
+    .pill-no  { background: #f3f4f6; color: #6b7280; }
+
+    /* ── Loading / empty ── */
+    .loading { text-align: center; padding: 2rem; color: #9ca3af; font-size: 0.9rem; }
+
+    /* ── Quick-quitters callout ── */
+    .quitter-note {
+      font-size: 0.82rem;
+      color: #6b7280;
+      margin-top: 0.75rem;
+      padding: 0.6rem 0.85rem;
+      background: #fefce8;
+      border: 1px solid #fde68a;
+      border-radius: 8px;
+    }
+    .quitter-note strong { color: #92400e; }
+  </style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>Survey Analytics</h1>
+    <p id="last-updated">Loading…</p>
+  </div>
+  <button class="refresh-btn" onclick="loadData()">↺ Refresh</button>
+</header>
+
+<main>
+  <div class="stats" id="stats-grid">
+    <div class="stat"><div class="stat-label">Total Responses</div><div class="stat-value" id="s-total">—</div></div>
+    <div class="stat"><div class="stat-label">Sales Link Clicks</div><div class="stat-value" id="s-sales">—</div><div class="stat-sub" id="s-sales-pct"></div></div>
+    <div class="stat"><div class="stat-label">Avg Time on Page</div><div class="stat-value" id="s-time">—</div><div class="stat-sub">before voting</div></div>
+    <div class="stat"><div class="stat-label">Quick Quitters</div><div class="stat-value" id="s-quitters">—</div><div class="stat-sub">voted in &lt;15s</div></div>
+  </div>
+
+  <div class="section">
+    <h2>Rating breakdown</h2>
+    <div id="rating-bars"><div class="loading">Loading…</div></div>
+  </div>
+
+  <div class="section">
+    <h2>Responses by article</h2>
+    <div id="articles-table"><div class="loading">Loading…</div></div>
+  </div>
+</main>
+
+<script>
+  // ── CONFIG ─────────────────────────────────────────────────────────────────
+  const SUPABASE_URL      = "https://YOUR_PROJECT_ID.supabase.co";
+  const SUPABASE_ANON_KEY = "YOUR_ANON_KEY";
+  // ──────────────────────────────────────────────────────────────────────────
+
+  const TABLE = "survey_responses";
+
+  async function fetchAll() {
+    const res = await fetch(
+      `${SUPABASE_URL}/rest/v1/${TABLE}?select=*&order=responded_at.desc&limit=1000`,
+      {
+        headers: {
+          "apikey":        SUPABASE_ANON_KEY,
+          "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
+        },
+      }
+    );
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return res.json();
+  }
+
+  const RATINGS = ["awesome","good","ok","poor"];
+  const RATING_LABELS = { awesome:"🚀 Awesome", good:"👍 Pretty Good", ok:"😐 Just OK", poor:"👎 Not Helpful" };
+  const BAR_CLASS     = { awesome:"bar-awesome", good:"bar-good", ok:"bar-ok", poor:"bar-poor" };
+
+  function pct(n, total) { return total ? Math.round((n / total) * 100) : 0; }
+
+  function loadData() {
+    document.getElementById("last-updated").textContent = "Refreshing…";
+
+    fetchAll().then(rows => {
+      const total    = rows.length;
+      const sales    = rows.filter(r => r.clicked_sales).length;
+      const quitters = rows.filter(r => r.time_on_page < 15).length;
+      const avgTime  = total ? Math.round(rows.reduce((s,r) => s + r.time_on_page, 0) / total) : 0;
+
+      // Stat cards
+      document.getElementById("s-total").textContent    = total;
+      document.getElementById("s-sales").textContent    = sales;
+      document.getElementById("s-sales-pct").textContent = total ? `${pct(sales,total)}% of voters` : "";
+      document.getElementById("s-time").textContent     = avgTime + "s";
+      document.getElementById("s-quitters").textContent = quitters;
+
+      // Rating breakdown
+      const counts = {};
+      RATINGS.forEach(r => counts[r] = rows.filter(x => x.rating === r).length);
+
+      document.getElementById("rating-bars").innerHTML = RATINGS.map(r => `
+        <div class="rating-row">
+          <div class="rating-row-label">
+            <span>${RATING_LABELS[r]}</span>
+            <span>${counts[r]} &nbsp;(${pct(counts[r], total)}%)</span>
+          </div>
+          <div class="bar-track">
+            <div class="bar-fill ${BAR_CLASS[r]}" style="width:${pct(counts[r],total)}%"></div>
+          </div>
+        </div>
+      `).join("") + (quitters > 0 ? `
+        <div class="quitter-note">
+          ⚡ <strong>${quitters} quick quitter${quitters !== 1 ? "s" : ""}</strong> voted within 15 seconds —
+          these readers may not have read the article before rating.
+        </div>
+      ` : "");
+
+      // Per-article table
+      const byArticle = {};
+      rows.forEach(r => {
+        if (!byArticle[r.article_title]) byArticle[r.article_title] = { total:0, sales:0, ratings:{awesome:0,good:0,ok:0,poor:0}, times:[] };
+        const a = byArticle[r.article_title];
+        a.total++;
+        if (r.clicked_sales) a.sales++;
+        if (a.ratings[r.rating] !== undefined) a.ratings[r.rating]++;
+        a.times.push(r.time_on_page);
+      });
+
+      const articleRows = Object.entries(byArticle)
+        .sort((a,b) => b[1].total - a[1].total)
+        .map(([title, a]) => {
+          const avgT = Math.round(a.times.reduce((s,t) => s+t, 0) / a.times.length);
+          const topRating = RATINGS.reduce((best, r) => a.ratings[r] > a.ratings[best] ? r : best, "awesome");
+          return `<tr>
+            <td>${title}</td>
+            <td style="text-align:center">${a.total}</td>
+            <td style="text-align:center">${RATING_LABELS[topRating]}</td>
+            <td style="text-align:center">${avgT}s</td>
+            <td style="text-align:center">
+              <span class="pill ${a.sales > 0 ? 'pill-yes' : 'pill-no'}">
+                ${a.sales > 0 ? `✓ ${a.sales}` : 'None'}
+              </span>
+            </td>
+          </tr>`;
+        }).join("");
+
+      document.getElementById("articles-table").innerHTML = total === 0
+        ? `<div class="loading">No responses yet.</div>`
+        : `<table>
+            <thead><tr>
+              <th>Article</th>
+              <th style="text-align:center">Votes</th>
+              <th style="text-align:center">Top Rating</th>
+              <th style="text-align:center">Avg Time</th>
+              <th style="text-align:center">Sales Clicks</th>
+            </tr></thead>
+            <tbody>${articleRows}</tbody>
+          </table>`;
+
+      document.getElementById("last-updated").textContent =
+        `Last updated ${new Date().toLocaleTimeString()}`;
+
+    }).catch(err => {
+      console.error(err);
+      document.getElementById("last-updated").textContent = "Error loading data — check your config.";
+    });
+  }
+
+  loadData();
+  // Auto-refresh every 60 seconds
+  setInterval(loadData, 60000);
+</script>
+
+</body>
+</html>
