@@ -154,7 +154,7 @@
 <script>
   // ── CONFIG ─────────────────────────────────────────────────────────────────
   const SUPABASE_URL      = "https://aeoviebvxtoxqmqzsetr.supabase.co/rest/v1/";
-  const SUPABASE_ANON_KEY = "YOUR_ANON_KEY";
+  const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFlb3ZpZWJ2eHRveHFtcXpzZXRyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIxNTEwNTEsImV4cCI6MjA5NzcyNzA1MX0.mfCyslW3vkS5h40R7ZtYyxW61DwFM6o0DHD1SyE9VZE";
   // ──────────────────────────────────────────────────────────────────────────
 
   const TABLE = "survey_responses";
